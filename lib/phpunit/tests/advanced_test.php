@@ -120,7 +120,7 @@ class advanced_test extends \advanced_testcase {
         // Ensure session is reset after setUser, as it may contain extra info.
         $SESSION->sometestvalue = true;
         $this->setUser($user);
-        $this->assertObjectNotHasAttribute('sometestvalue', $SESSION);
+        $this->assertObjectNotHasProperty('sometestvalue', $SESSION);
     }
 
     public function test_set_admin_user() {
@@ -369,7 +369,15 @@ class advanced_test extends \advanced_testcase {
         ]);
 
         if ($phpwarn) {
-            $this->expectWarning();
+            // Let's convert the warnings into an assert-able exception.
+            set_error_handler(
+                static function ($errno, $errstr) {
+                    restore_error_handler();
+                    throw new \Exception($errstr, $errno);
+                },
+                E_WARNING // Or any other specific E_ that we want to assert.
+            );
+            $this->expectException(\Exception::class);
         }
         $this->assertEventContextNotUsed($event);
     }
@@ -726,5 +734,70 @@ class advanced_test extends \advanced_testcase {
         \core\task\manager::queue_adhoc_task($task);
         $this->runAdhocTasks();
         $this->expectOutputRegex("/Task was run as {$user->id}/");
+    }
+
+    /**
+     * Test the incrementing mock clock.
+     *
+     * @covers ::mock_clock_with_incrementing
+     * @covers \incrementing_clock
+     */
+    public function test_mock_clock_with_incrementing(): void {
+        $standard = \core\di::get(\core\clock::class);
+        $this->assertInstanceOf(\Psr\Clock\ClockInterface::class, $standard);
+        $this->assertInstanceOf(\core\clock::class, $standard);
+
+        $newclock = $this->mock_clock_with_incrementing(0);
+        $mockedclock = \core\di::get(\core\clock::class);
+        $this->assertInstanceOf(\incrementing_clock::class, $newclock);
+        $this->assertSame($newclock, $mockedclock);
+
+        // Test the functionality.
+        $this->assertEquals(0, $mockedclock->now()->getTimestamp());
+        $this->assertEquals(1, $newclock->now()->getTimestamp());
+        $this->assertEquals(2, $mockedclock->now()->getTimestamp());
+
+        // Specify a specific start time.
+        $newclock = $this->mock_clock_with_incrementing(12345);
+        $mockedclock = \core\di::get(\core\clock::class);
+        $this->assertSame($newclock, $mockedclock);
+
+        $this->assertEquals(12345, $mockedclock->now()->getTimestamp());
+        $this->assertEquals(12346, $newclock->now()->getTimestamp());
+        $this->assertEquals(12347, $mockedclock->now()->getTimestamp());
+
+        $this->assertEquals($newclock->time, $mockedclock->now()->getTimestamp());
+    }
+
+    /**
+     * Test the incrementing mock clock.
+     *
+     * @covers ::mock_clock_with_frozen
+     * @covers \frozen_clock
+     */
+    public function test_mock_clock_with_frozen(): void {
+        $standard = \core\di::get(\core\clock::class);
+        $this->assertInstanceOf(\Psr\Clock\ClockInterface::class, $standard);
+        $this->assertInstanceOf(\core\clock::class, $standard);
+
+        $newclock = $this->mock_clock_with_frozen(0);
+        $mockedclock = \core\di::get(\core\clock::class);
+        $this->assertInstanceOf(\frozen_clock::class, $newclock);
+        $this->assertSame($newclock, $mockedclock);
+
+        // Test the functionality.
+        $initialtime = $mockedclock->now()->getTimestamp();
+        $this->assertEquals($initialtime, $newclock->now()->getTimestamp());
+        $this->assertEquals($initialtime, $mockedclock->now()->getTimestamp());
+
+        // Specify a specific start time.
+        $newclock = $this->mock_clock_with_frozen(12345);
+        $mockedclock = \core\di::get(\core\clock::class);
+        $this->assertSame($newclock, $mockedclock);
+
+        $initialtime = $mockedclock->now();
+        $this->assertEquals($initialtime, $mockedclock->now());
+        $this->assertEquals($initialtime, $newclock->now());
+        $this->assertEquals($initialtime, $mockedclock->now());
     }
 }

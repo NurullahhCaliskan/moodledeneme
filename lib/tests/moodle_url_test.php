@@ -16,6 +16,8 @@
 
 namespace core;
 
+use GuzzleHttp\Psr7\Uri;
+
 /**
  * Tests for moodle_url.
  *
@@ -257,7 +259,7 @@ final class moodle_url_test extends \advanced_testcase {
      * @param string $url URL with params to test.
      * @param array $expected The expected result.
      */
-    public function test_moodle_url_export_params_for_template(string $url, array $expected) :void {
+    public function test_moodle_url_export_params_for_template(string $url, array $expected): void {
         // Should return params in the URL.
         $moodleurl = new \moodle_url($url);
         $this->assertSame($expected, $moodleurl->export_params_for_template());
@@ -268,7 +270,7 @@ final class moodle_url_test extends \advanced_testcase {
      *
      * @return array[] the array of test data.
      */
-    public function moodle_url_export_params_for_template_provider() :array {
+    public function moodle_url_export_params_for_template_provider(): array {
         $baseurl = "http://example.com";
         return [
                 'With indexed array params' => [
@@ -400,6 +402,35 @@ final class moodle_url_test extends \advanced_testcase {
         ];
     }
 
+    public function test_from_uri(): void {
+        global $CFG;
+
+        $uri = new Uri('http://www.example.org:447/my/file/is/here.txt?really=1');
+        $url = \moodle_url::from_uri($uri);
+        $this->assertSame('http://www.example.org:447/my/file/is/here.txt?really=1', $url->out(false));
+        $this->assertEquals(1, $url->param('really'));
+
+        $uri = new Uri('https://www.example.org/my/file/is/here.txt?really=1');
+        $url = \moodle_url::from_uri($uri);
+        $this->assertSame('https://www.example.org/my/file/is/here.txt?really=1', $url->out(false));
+        $this->assertEquals(1, $url->param('really'));
+
+        // Multiple params.
+        $uri = new Uri('https://www.example.org/my/file/is/here.txt?really=1&another=2&&more=3&moar=4');
+        $url = \moodle_url::from_uri($uri);
+        $this->assertSame('https://www.example.org/my/file/is/here.txt?really=1&another=2&more=3&moar=4', $url->out(false));
+        $this->assertEquals(1, $url->param('really'));
+        $this->assertEquals(2, $url->param('another'));
+        $this->assertEquals(3, $url->param('more'));
+        $this->assertEquals(4, $url->param('moar'));
+
+        // Anchors.
+        $uri = new Uri("{$CFG->wwwroot}/course/view/#section-1");
+        $url = \moodle_url::from_uri($uri);
+        $this->assertSame("{$CFG->wwwroot}/course/view/#section-1", $url->out(false));
+        $this->assertEmpty($url->params());
+    }
+
     /**
      * @dataProvider url_fragment_parsing_provider
      */
@@ -427,12 +458,6 @@ final class moodle_url_test extends \advanced_testcase {
         // Test the value of ->out() with escaping disabled.
         $parts = parse_url($url->out(false));
         $this->assertEquals($expected, $parts['fragment']);
-
-        $url->set_anchor($fragment);
-        $this->assertEquals(
-            "#{$expected}",
-            $url->get_encoded_anchor(),
-        );
     }
 
     /**
@@ -453,6 +478,15 @@ final class moodle_url_test extends \advanced_testcase {
             'Fragment with RFC3986 characters' => [
                 'test-._~!$&\'()*+,;=:@/?',
                 'test-._~!$&\'()*+,;=:@/?',
+            ],
+            'Contains % without HEXDIG HEXDIG' => [
+                '%Percent',
+                '%25Percent',
+            ],
+            'Contains multiple %' => [
+                // % followed by a valid pct-encoded followed by two more %%.
+                '%%23%%',
+                '%25%23%25%25',
             ],
             'Fragment with already-encoded RFC3986 characters' => [
                 rawurlencode('test-._~!$&\'()*+,;=:@/?'),

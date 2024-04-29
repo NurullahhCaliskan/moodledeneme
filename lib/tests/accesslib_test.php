@@ -31,6 +31,17 @@ defined('MOODLE_INTERNAL') || die();
  * Note: execution may take many minutes especially on slower servers.
  */
 class accesslib_test extends advanced_testcase {
+
+    /**
+     * Setup.
+     */
+    protected function setUp(): void {
+        parent::setUp();
+        $this->resetAfterTest();
+        // Turn off the course welcome message, so we can easily test other messages.
+        set_config('sendcoursewelcomemessage', 0, 'enrol_manual');
+    }
+
     /**
      * Verify comparison of context instances in phpunit asserts.
      */
@@ -1685,23 +1696,23 @@ class accesslib_test extends advanced_testcase {
         $this->assertDebuggingCalled('get_role_users() adding u.lastname, u.firstname to the query result because they were required by $sort but missing in $fields');
         $this->assertCount(2, $users);
         $this->assertArrayHasKey($user1->id, $users);
-        $this->assertObjectHasAttribute('lastname', $users[$user1->id]);
-        $this->assertObjectHasAttribute('firstname', $users[$user1->id]);
+        $this->assertObjectHasProperty('lastname', $users[$user1->id]);
+        $this->assertObjectHasProperty('firstname', $users[$user1->id]);
         $this->assertArrayHasKey($user3->id, $users);
-        $this->assertObjectHasAttribute('lastname', $users[$user3->id]);
-        $this->assertObjectHasAttribute('firstname', $users[$user3->id]);
+        $this->assertObjectHasProperty('lastname', $users[$user3->id]);
+        $this->assertObjectHasProperty('firstname', $users[$user3->id]);
 
         $users = get_role_users($teacherrole->id, $coursecontext, false, 'u.id AS id_alias');
         $this->assertDebuggingCalled('get_role_users() adding u.lastname, u.firstname to the query result because they were required by $sort but missing in $fields');
         $this->assertCount(2, $users);
         $this->assertArrayHasKey($user1->id, $users);
-        $this->assertObjectHasAttribute('id_alias', $users[$user1->id]);
-        $this->assertObjectHasAttribute('lastname', $users[$user1->id]);
-        $this->assertObjectHasAttribute('firstname', $users[$user1->id]);
+        $this->assertObjectHasProperty('id_alias', $users[$user1->id]);
+        $this->assertObjectHasProperty('lastname', $users[$user1->id]);
+        $this->assertObjectHasProperty('firstname', $users[$user1->id]);
         $this->assertArrayHasKey($user3->id, $users);
-        $this->assertObjectHasAttribute('id_alias', $users[$user3->id]);
-        $this->assertObjectHasAttribute('lastname', $users[$user3->id]);
-        $this->assertObjectHasAttribute('firstname', $users[$user3->id]);
+        $this->assertObjectHasProperty('id_alias', $users[$user3->id]);
+        $this->assertObjectHasProperty('lastname', $users[$user3->id]);
+        $this->assertObjectHasProperty('firstname', $users[$user3->id]);
 
         $users = get_role_users($teacherrole->id, $coursecontext, false, 'u.id, u.email, u.idnumber', 'u.idnumber', null, $group->id);
         $this->assertCount(1, $users);
@@ -1965,7 +1976,6 @@ class accesslib_test extends advanced_testcase {
         // the access.php works.
         $mockedcomponent = new ReflectionClass(core_component::class);
         $mockedplugins = $mockedcomponent->getProperty('plugins');
-        $mockedplugins->setAccessible(true);
         $plugins = $mockedplugins->getValue();
         $plugins['fake'] = [$pluginname => "{$CFG->dirroot}/lib/tests/fixtures/fakeplugins/$pluginname"];
         $mockedplugins->setValue(null, $plugins);
@@ -4877,7 +4887,6 @@ class accesslib_test extends advanced_testcase {
             ->getMock();
 
         $rcp = new ReflectionProperty($context, '_path');
-        $rcp->setAccessible(true);
         $rcp->setValue($context, $contextpath);
 
         $comparisoncontext = $this->getMockBuilder(\context::class)
@@ -4889,7 +4898,6 @@ class accesslib_test extends advanced_testcase {
             ->getMock();
 
         $rcp = new ReflectionProperty($comparisoncontext, '_path');
-        $rcp->setAccessible(true);
         $rcp->setValue($comparisoncontext, $testpath);
 
         $this->assertEquals($expected, $context->is_parent_of($comparisoncontext, $testself));
@@ -4986,7 +4994,6 @@ class accesslib_test extends advanced_testcase {
             ->getMock();
 
         $rcp = new ReflectionProperty($context, '_path');
-        $rcp->setAccessible(true);
         $rcp->setValue($context, $contextpath);
 
         $comparisoncontext = $this->getMockBuilder(\context::class)
@@ -4998,7 +5005,6 @@ class accesslib_test extends advanced_testcase {
             ->getMock();
 
         $rcp = new ReflectionProperty($comparisoncontext, '_path');
-        $rcp->setAccessible(true);
         $rcp->setValue($comparisoncontext, $testpath);
 
         $this->assertEquals($expected, $context->is_child_of($comparisoncontext, $testself));

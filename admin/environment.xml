@@ -3934,7 +3934,7 @@
       </FEEDBACK>
     </UNICODE>
     <DATABASE level="required">
-      <VENDOR name="mariadb" version="10.4" />
+      <VENDOR name="mariadb" version="10.6.7" />
       <VENDOR name="mysql" version="8.0" />
       <VENDOR name="postgres" version="13" />
       <VENDOR name="mssql" version="14.0" />
@@ -4126,7 +4126,7 @@
       </FEEDBACK>
     </UNICODE>
     <DATABASE level="required">
-      <VENDOR name="mariadb" version="10.4" />
+      <VENDOR name="mariadb" version="10.6.7" />
       <VENDOR name="mysql" version="8.0" />
       <VENDOR name="postgres" version="13" />
       <VENDOR name="mssql" version="14.0" />
@@ -4320,7 +4320,7 @@
       </FEEDBACK>
     </UNICODE>
     <DATABASE level="required">
-      <VENDOR name="mariadb" version="10.4" />
+      <VENDOR name="mariadb" version="10.6.7" />
       <VENDOR name="mysql" version="8.0" />
       <VENDOR name="postgres" version="13" />
       <VENDOR name="mssql" version="14.0" />
@@ -4503,6 +4503,8 @@
       <CUSTOM_CHECK file="lib/upgradelib.php" function="check_db_prefix_length" level="required">
       </CUSTOM_CHECK>
       <CUSTOM_CHECK file="lib/upgradelib.php" function="check_oracle_usage" level="optional">
+      </CUSTOM_CHECK>
+      <CUSTOM_CHECK file="lib/upgradelib.php" function="check_async_backup" level="recommended">
       </CUSTOM_CHECK>
     </CUSTOM_CHECKS>
   </MOODLE>

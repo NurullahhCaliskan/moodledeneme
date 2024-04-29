@@ -35,8 +35,6 @@ redirect_if_major_upgrade_required();
 
 require_login();
 
-
-
 $hassiteconfig = has_capability('moodle/site:config', context_system::instance());
 if ($hassiteconfig && moodle_needs_upgrading()) {
     redirect(new moodle_url('/admin/index.php'));
@@ -91,14 +89,7 @@ if ($coursecat) {
 if (!empty($coursemanagemenu)) {
     // Render the course management menu.
     $PAGE->add_header_action($OUTPUT->render_from_template('my/dropdown', $coursemanagemenu));
-    $PAGE->add_header_action($OUTPUT->render_from_template('core_admin/header_search_input', [
-        'action' => new moodle_url('/admin/search.php'),
-    ]));
 }
-
-\core\notification::add("Hda", \core\output\notification::NOTIFY_SUCCESS);
-
-
 
 echo $OUTPUT->header();
 
@@ -109,7 +100,6 @@ if (core_userfeedback::should_display_reminder()) {
 echo $OUTPUT->custom_block_region('content');
 
 echo $OUTPUT->footer();
-
 
 // Trigger dashboard has been viewed event.
 $eventparams = array('context' => $context);

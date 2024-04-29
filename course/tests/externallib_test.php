@@ -737,7 +737,7 @@ class externallib_test extends externallib_advanced_testcase {
     /**
      * Test get_courses
      */
-    public function test_get_courses () {
+    public function test_get_courses() {
         global $DB;
 
         $this->resetAfterTest(true);
@@ -923,7 +923,7 @@ class externallib_test extends externallib_advanced_testcase {
     /**
      * Test search_courses
      */
-    public function test_search_courses () {
+    public function test_search_courses() {
 
         global $DB;
 
@@ -1164,6 +1164,7 @@ class externallib_test extends externallib_advanced_testcase {
             'showdate' => 1,
         ];
         $resource = self::getDataGenerator()->create_module('resource', $record);
+        $h5pactivity = self::getDataGenerator()->create_module('h5pactivity', ['course' => $course]);
 
         // We first run the test as admin.
         $this->setAdminUser();
@@ -1186,8 +1187,17 @@ class externallib_test extends externallib_advanced_testcase {
                 // Afterlink for forums has been removed; it has been moved to the new activity badge content.
                 $this->assertEmpty($module['afterlink']);
                 $this->assertEquals('1 unread post', $module['activitybadge']['badgecontent']);
-                $this->assertEquals('badge-dark', $module['activitybadge']['badgestyle']);
-
+                $this->assertEquals('bg-dark text-white', $module['activitybadge']['badgestyle']);
+                $this->assertEquals(
+                    plugin_supports(
+                        'mod',
+                        'forum',
+                        FEATURE_MOD_PURPOSE,
+                        MOD_PURPOSE_OTHER
+                    ), $module['purpose']
+                );
+                $this->assertFalse($module['branded']);
+                $this->assertStringContainsString('trackingtype', $module['customdata']);   // The customdata is JSON encoded.
                 $testexecuted = $testexecuted + 2;
             } else if ($module['id'] == $labelcm->id and $module['modname'] == 'label') {
                 $cm = $modinfo->cms[$labelcm->id];
@@ -1198,17 +1208,55 @@ class externallib_test extends externallib_advanced_testcase {
                 $this->assertEquals(context_module::instance($labelcm->id)->id, $module['contextid']);
                 $this->assertTrue($module['noviewlink']);
                 $this->assertNotEmpty($module['description']);  // Label always prints the description.
+                $this->assertEquals(
+                    plugin_supports(
+                        'mod',
+                        'label',
+                        FEATURE_MOD_PURPOSE,
+                        MOD_PURPOSE_OTHER
+                    ), $module['purpose']
+                );
+                $this->assertFalse($module['branded']);
                 $testexecuted = $testexecuted + 1;
             } else if ($module['id'] == $datacm->id and $module['modname'] == 'data') {
                 $this->assertStringContainsString('customcompletionrules', $module['customdata']);
                 $this->assertFalse($module['noviewlink']);
                 $this->assertArrayNotHasKey('description', $module);
+                $this->assertEquals(
+                    plugin_supports(
+                        'mod',
+                        'data',
+                        FEATURE_MOD_PURPOSE,
+                        MOD_PURPOSE_OTHER
+                    ), $module['purpose']
+                );
+                $this->assertFalse($module['branded']);
                 $testexecuted = $testexecuted + 1;
             } else if ($module['instance'] == $resource->id && $module['modname'] == 'resource') {
                 // Resources have both, afterlink for the size and the update date and activitybadge for the file type.
                 $this->assertStringContainsString('32 bytes', $module['afterlink']);
                 $this->assertEquals('TXT', $module['activitybadge']['badgecontent']);
                 $this->assertEquals('badge-none', $module['activitybadge']['badgestyle']);
+                $this->assertEquals(
+                    plugin_supports(
+                        'mod',
+                        'resource',
+                        FEATURE_MOD_PURPOSE,
+                        MOD_PURPOSE_OTHER
+                    ), $module['purpose']
+                );
+                $this->assertFalse($module['branded']);
+                $testexecuted = $testexecuted + 1;
+            } else if ($module['instance'] == $h5pactivity->id && $module['modname'] == 'h5pactivity') {
+                $this->assertEquals(
+                    plugin_supports(
+                        'mod',
+                        'h5pactivity',
+                        FEATURE_MOD_PURPOSE,
+                        MOD_PURPOSE_OTHER
+                    ), $module['purpose']
+                );
+                $this->assertTrue($module['branded']);
                 $testexecuted = $testexecuted + 1;
             }
         }
@@ -1222,10 +1270,10 @@ class externallib_test extends externallib_advanced_testcase {
         $CFG->forum_allowforcedreadtracking = 0;    // Recover original value.
         forum_tp_count_forum_unread_posts($forumcm, $course, true);    // Reset static cache for further tests.
 
-        $this->assertEquals(6, $testexecuted);
+        $this->assertEquals(7, $testexecuted);
         $this->assertEquals(0, $sections[0]['section']);
 
-        $this->assertCount(7, $sections[0]['modules']);
+        $this->assertCount(8, $sections[0]['modules']);
         $this->assertCount(1, $sections[1]['modules']);
         $this->assertCount(1, $sections[2]['modules']);
         $this->assertCount(1, $sections[3]['modules']); // One module for the section with availability restrictions.
@@ -1491,6 +1539,7 @@ class externallib_test extends externallib_advanced_testcase {
         $this->assertFalse($completiondata['isautomatic']);
         $this->assertFalse($completiondata['istrackeduser']);
         $this->assertTrue($completiondata['uservisible']);
+        $this->assertFalse($completiondata['isoverallcomplete']);
 
         // Set activity completed.
         core_completion_external::update_activity_completion_status_manually($forumcm->id, true);
@@ -1501,6 +1550,7 @@ class externallib_test extends externallib_advanced_testcase {
         $result = external_api::clean_returnvalue(core_course_external::get_course_contents_returns(), $result);
 
         $this->assertEquals(COMPLETION_COMPLETE, $result[0]['modules'][0]["completiondata"]['state']);
+        $this->assertTrue($result[0]['modules'][0]["completiondata"]['isoverallcomplete']);
         $this->assertNotEmpty($result[0]['modules'][0]["completiondata"]['timecompleted']);
         $this->assertEmpty($result[0]['modules'][0]["completiondata"]['overrideby']);
 
@@ -1522,6 +1572,7 @@ class externallib_test extends externallib_advanced_testcase {
         $this->assertFalse($completiondata['isautomatic']);
         $this->assertFalse($completiondata['istrackeduser']);
         $this->assertTrue($completiondata['uservisible']);
+        $this->assertFalse($completiondata['isoverallcomplete']);
 
         // Disable completion.
         $CFG->enablecompletion = 0;
@@ -1572,6 +1623,7 @@ class externallib_test extends externallib_advanced_testcase {
         $this->assertFalse($completiondata['istrackeduser']);
         $this->assertTrue($completiondata['uservisible']);
         $this->assertCount(1, $completiondata['details']);
+        $this->assertFalse($completiondata['isoverallcomplete']);
     }
 
     /**
@@ -3058,6 +3110,53 @@ class externallib_test extends externallib_advanced_testcase {
         ], reset($course['customfields']));
     }
 
+    /**
+     * Test retrieving courses by field returning communication tools.
+     * @covers \core_course_external::get_courses_by_field
+     */
+    public function test_get_courses_by_field_communication(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Create communication tool in course.
+        set_config('enablecommunicationsubsystem', 1);
+
+        $roomname = 'Course chat';
+        $telegramlink = 'https://my.telegram.chat/120';
+        $record = [
+            'selectedcommunication' => 'communication_customlink',
+            'communicationroomname' => $roomname,
+            'customlinkurl' => $telegramlink,
+        ];
+        $course = $this->getDataGenerator()->create_course($record);
+        $communication = \core_communication\api::load_by_instance(
+            context: \core\context\course::instance($course->id),
+            component: 'core_course',
+            instancetype: 'coursecommunication',
+            instanceid: $course->id,
+        );
+
+        $result = external_api::clean_returnvalue(
+            core_course_external::get_courses_by_field_returns(),
+            core_course_external::get_courses_by_field('id', $course->id)
+        );
+
+        $course = reset($result['courses']);
+        $this->assertEquals($roomname, $course['communicationroomname']);
+        $this->assertEquals($telegramlink, $course['communicationroomurl']);
+
+        // Course without comm tools.
+        $course = $this->getDataGenerator()->create_course();
+        $result = external_api::clean_returnvalue(
+            core_course_external::get_courses_by_field_returns(),
+            core_course_external::get_courses_by_field('id', $course->id)
+        );
+
+        $course = reset($result['courses']);
+        $this->assertNotContains('communicationroomname', $course);
+        $this->assertNotContains('communicationroomurl', $course);
+    }
+
     public function test_get_courses_by_field_invalid_field() {
         $this->expectException('invalid_parameter_exception');
         $result = core_course_external::get_courses_by_field('zyx', 'x');
@@ -3091,8 +3190,24 @@ class externallib_test extends externallib_advanced_testcase {
 
         // Create different types of activities.
         $course  = self::getDataGenerator()->create_course();
-        $tocreate = array('assign', 'book', 'choice', 'folder', 'forum', 'glossary', 'imscp', 'label', 'lti', 'page', 'quiz',
-                            'resource', 'scorm', 'survey', 'url', 'wiki');
+        $tocreate = [
+            'assign',
+            'book',
+            'choice',
+            'folder',
+            'forum',
+            'glossary',
+            'imscp',
+            'label',
+            'lesson',
+            'lti',
+            'page',
+            'quiz',
+            'resource',
+            'scorm',
+            'url',
+            'wiki',
+        ];
 
         $modules = array();
         foreach ($tocreate as $modname) {
@@ -3188,7 +3303,7 @@ class externallib_test extends externallib_advanced_testcase {
     /**
      * Test cases for the get_enrolled_courses_by_timeline_classification test.
      */
-    public function get_get_enrolled_courses_by_timeline_classification_test_cases():array {
+    public function get_get_enrolled_courses_by_timeline_classification_test_cases(): array {
         $now = time();
         $day = 86400;
 

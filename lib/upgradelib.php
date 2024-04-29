@@ -513,6 +513,13 @@ function upgrade_stale_php_files_present(): bool {
     global $CFG;
 
     $someexamplesofremovedfiles = [
+        // Removed in 4.4.
+        '/README.txt',
+        '/lib/dataformatlib.php',
+        '/lib/horde/readme_moodle.txt',
+        '/lib/yui/src/formchangechecker/js/formchangechecker.js',
+        '/mod/forum/pix/monologo.png',
+        '/question/tests/behat/behat_question.php',
         // Removed in 4.3.
         '/badges/ajax.php',
         '/course/editdefaultcompletion.php',
@@ -1949,9 +1956,6 @@ function upgrade_core($version, $verbose) {
         $syscontext->mark_dirty();
         core_upgrade_time::record_detail('context_system::mark_dirty');
 
-        // Prompt admin to register site. Reminder flow handles sites already registered, so admin won't be prompted if registered.
-        set_config('registrationpending', true);
-
         print_upgrade_part_end('moodle', false, $verbose);
     } catch (Exception $ex) {
         upgrade_handle_exception($ex);
@@ -2003,6 +2007,10 @@ function upgrade_noncore($verbose) {
         core_upgrade_time::record_detail('core_component::get_all_versions_hash');
         set_config('allcomponenthash', core_component::get_all_component_hash());
         core_upgrade_time::record_detail('core_component::get_all_component_hash');
+
+        // Prompt admin to register site. Reminder flow handles sites already registered, so admin won't be prompted if registered.
+        // Defining for non-core upgrades also covers core upgrades.
+        set_config('registrationpending', true);
 
         // Purge caches again, just to be sure we arn't holding onto old stuff now.
         if (!defined('CLI_UPGRADE_RUNNING') || !CLI_UPGRADE_RUNNING) {
@@ -2892,6 +2900,24 @@ function check_oracle_usage(environment_results $result): ?environment_results {
     if ($CFG->dbtype === 'oci') {
         $result->setInfo('oracle_database_usage');
         $result->setFeedbackStr('oracledatabaseinuse');
+        return $result;
+    }
+
+    return null;
+}
+
+/**
+ * Check if asynchronous backups are enabled.
+ *
+ * @param environment_results $result
+ * @return environment_results|null
+ */
+function check_async_backup(environment_results $result): ?environment_results {
+    global $CFG;
+
+    if (!during_initial_install() && empty($CFG->enableasyncbackup)) { // Have to use $CFG as config table may not be available.
+        $result->setInfo('Asynchronous backups disabled');
+        $result->setFeedbackStr('asyncbackupdisabled');
         return $result;
     }
 
