@@ -1,7 +1,7 @@
 This files describes API changes in /mod/data - plugins,
 information provided here is intended especially for developers.
 
-=== 4.5 ===
+=== 4.4.1 ===
 * The `data_add_record` method accepts a new `$approved` parameter to set the corresponding state of the new record
 
 === 4.4 ===
